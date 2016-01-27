@@ -38,6 +38,11 @@ var modelInstance *Model
 
 type NewModelFunc func() interface{}
 
+type PrimaryInterface interface {
+	SetId(int64)
+	Id() int64
+}
+
 func Load() *Model {
 	if modelInstance != nil {
 		return modelInstance
