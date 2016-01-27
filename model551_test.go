@@ -22,3 +22,27 @@ func BenchmarkLoad(b *testing.B) {
 		_ = model551.Load()
 	}
 }
+
+type SampleModel struct {
+	Name        string
+	Description string
+}
+
+func NewSampleModel() interface{} {
+	return SampleModel{}
+}
+
+func TestAdd(t *testing.T) {
+	m := model551.Load()
+
+	m.Add(NewSampleModel)
+
+	detail := m.Get("SampleModel")
+
+	if detail.ModelName != "SampleModel" {
+		t.Errorf("モデルの保持に失敗しました。")
+	}
+	if detail.ModelType.Name() != "SampleModel" {
+		t.Errorf("モデルの保持に失敗しました。")
+	}
+}
