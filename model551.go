@@ -15,6 +15,7 @@ type ModelInformation struct {
 	ModelType        reflect.Type
 	ModelName        string
 	TableInformation *TableInformation
+	SqlInformation   *SqlCache
 }
 
 type TableInformation struct {
@@ -23,6 +24,14 @@ type TableInformation struct {
 	Fields         []string
 	DeleteTable    bool
 	DeletedAtField string
+}
+
+type SqlCache struct {
+	Insert        string
+	Select        string
+	Update        string
+	Delete        string
+	LogicalDelete string
 }
 
 var modelInstance *Model
@@ -51,14 +60,17 @@ func (m *Model) Add(newFunc NewModelFunc) {
 		panic(errors.New("追加されたモデルは既に登録されています。"))
 	}
 
-	detail := &ModelInformation{
+	mInfo := &ModelInformation{
 		NewFunc:newFunc,
 		ModelType:mType,
 		ModelName:mName,
-		TableInformation:loadTableSetting(mType),
 	}
 
-	m.models[mName] = detail
+	mInfo.TableInformation = loadTableSetting(mType)
+
+	mInfo.SqlInformation = cacheSql(mInfo.TableInformation)
+
+	m.models[mName] = mInfo
 }
 
 func (m *Model) Get(modelName string) *ModelInformation {
@@ -108,7 +120,12 @@ func loadPrimaryKey(mType reflect.Type) string {
 		sField := mType.Field(i)
 		pk, err := strconv.ParseBool(sField.Tag.Get("db_pk"))
 		if err == nil && pk {
-			return string551.SnakeCase(sField.Name)
+			db := sField.Tag.Get("db")
+			if db == "" {
+				return string551.SnakeCase(sField.Name)
+			} else {
+				return string551.SnakeCase(db)
+			}
 		}
 	}
 
@@ -147,4 +164,126 @@ func loadFields(mType reflect.Type) []string {
 
 	return fields
 
+}
+
+func cacheSql(tInfo *TableInformation) *SqlCache {
+	sqlCache := &SqlCache{
+		Insert:cacheSqlInsert(tInfo),
+		Select:cacheSqlSelect(tInfo),
+		Update:cacheSqlUpdate(tInfo),
+		Delete:cacheSqlDelete(tInfo),
+		LogicalDelete:cacheSqlLogicalDelete(tInfo),
+	}
+
+	return sqlCache
+}
+
+func cacheSqlInsert(tInfo *TableInformation) string {
+	sql := ""
+	var append int = 0
+
+	sql = string551.Join(sql, "INSERT INTO `" + tInfo.TableName + "` ")
+	sql = string551.Join(sql, "(")
+	for i := 0; i < len(tInfo.Fields); i++ {
+		if tInfo.Fields[i] == tInfo.PrimaryKey {
+			continue
+		}
+		if append == 0 {
+			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "`")
+		} else {
+			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "`")
+		}
+		append++
+	}
+
+	append = 0
+	sql = string551.Join(sql, ") VALUES (")
+	for i := 0; i < len(tInfo.Fields); i++ {
+		if tInfo.Fields[i] == tInfo.PrimaryKey {
+			continue
+		}
+		if append == 0 {
+			sql = string551.Join(sql, "?")
+		} else {
+			sql = string551.Join(sql, ", ?")
+		}
+		append++
+	}
+	sql = string551.Join(sql, ")")
+
+	return sql
+}
+
+func cacheSqlSelect(tInfo *TableInformation) string {
+	sql := ""
+
+	sql = string551.Join(sql, "SELECT ")
+	for i := 0; i < len(tInfo.Fields); i++ {
+		if i == 0 {
+			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "`")
+		} else {
+			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "`")
+		}
+	}
+	sql = string551.Join(sql, " FROM `" + tInfo.TableName + "` WHERE 1 = 1")
+
+	return sql
+}
+
+func cacheSqlUpdate(tInfo *TableInformation) string {
+	sql := ""
+	var append int = 0
+
+	sql = string551.Join(sql, "UPDATE `" + tInfo.TableName + "` SET ")
+	for i := 0; i < len(tInfo.Fields); i++ {
+		if tInfo.Fields[i] == tInfo.PrimaryKey {
+			continue
+		}
+		if append == 0 {
+			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "` = ?")
+		} else {
+			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "` = ?")
+		}
+		append++
+	}
+	sql = string551.Join(sql, " WHERE `" + tInfo.PrimaryKey + "` = ?")
+
+	return sql
+}
+
+func cacheSqlDelete(tInfo *TableInformation) string {
+	sql := ""
+
+	sql = string551.Join(sql, "DELETE FROM `" + tInfo.TableName + "` WHERE `" + tInfo.PrimaryKey + "` = ?")
+
+	return sql
+}
+
+func cacheSqlLogicalDelete(tInfo *TableInformation) string {
+	sql := ""
+
+	if tInfo.DeleteTable == false {
+		return sql
+	}
+
+	sql = string551.Join(sql, "INSERT INTO `" + tInfo.TableName + "_delete` ")
+	sql = string551.Join(sql, "(")
+	for i := 0; i < len(tInfo.Fields); i++ {
+		if i == 0 {
+			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "`")
+		} else {
+			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "`")
+		}
+	}
+	sql = string551.Join(sql, ", `" + tInfo.DeletedAtField + "`) VALUES (")
+	for i := 0; i < len(tInfo.Fields); i++ {
+		if i == 0 {
+			sql = string551.Join(sql, "?")
+		} else {
+			sql = string551.Join(sql, ", ?")
+		}
+	}
+	sql = string551.Join(sql, ", ?)")
+
+	return sql
 }

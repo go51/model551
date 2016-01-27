@@ -79,8 +79,8 @@ func TestTableInfo(t *testing.T) {
 	if mSampleModel.TableInformation.PrimaryKey != "id" {
 		t.Errorf("プライマリーキーの解析に失敗しました。\n\"id\" => \"%s\"\n", mSampleModel.TableInformation.PrimaryKey)
 	}
-	if mSampleModelTableInfo.TableInformation.PrimaryKey != "key" {
-		t.Errorf("プライマリーキーの解析に失敗しました。\n\"key\" => \"%s\"\n", mSampleModelTableInfo.TableInformation.PrimaryKey)
+	if mSampleModelTableInfo.TableInformation.PrimaryKey != "id" {
+		t.Errorf("プライマリーキーの解析に失敗しました。\n\"id\" => \"%s\"\n", mSampleModelTableInfo.TableInformation.PrimaryKey)
 	}
 
 	// delete table
@@ -105,3 +105,62 @@ func TestTableInfo(t *testing.T) {
 		t.Errorf("フィールドの解析に失敗しました。\n\"id\" => \"%s\"\nDump: %#v\n", mSampleModelTableInfo.TableInformation.Fields[0], mSampleModelTableInfo.TableInformation.Fields)
 	}
 }
+
+func TestSql(t *testing.T) {
+	m := model551.Load()
+
+	mSampleModel := m.Get("SampleModel")
+	mSampleModelTableInfo := m.Get("SampleModelTableInfo")
+
+	// Insert
+	sql := "INSERT INTO `sample_model` (`name`, `description`) VALUES (?, ?)"
+	if mSampleModel.SqlInformation.Insert != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModel.SqlInformation.Insert)
+	}
+	sql = "INSERT INTO `table_information` (`description`) VALUES (?)"
+	if mSampleModelTableInfo.SqlInformation.Insert != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModelTableInfo.SqlInformation.Insert)
+	}
+
+	// Select
+	sql = "SELECT `id`, `name`, `description` FROM `sample_model` WHERE 1 = 1"
+	if mSampleModel.SqlInformation.Select != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModel.SqlInformation.Select)
+	}
+	sql = "SELECT `id`, `description` FROM `table_information` WHERE 1 = 1"
+	if mSampleModelTableInfo.SqlInformation.Select != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModelTableInfo.SqlInformation.Select)
+	}
+
+	// Update
+	sql = "UPDATE `sample_model` SET `name` = ?, `description` = ? WHERE `id` = ?"
+	if mSampleModel.SqlInformation.Update != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModel.SqlInformation.Update)
+	}
+	sql = "UPDATE `table_information` SET `description` = ? WHERE `id` = ?"
+	if mSampleModelTableInfo.SqlInformation.Update != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModelTableInfo.SqlInformation.Update)
+	}
+
+	// Delete
+	sql = "DELETE FROM `sample_model` WHERE `id` = ?"
+	if mSampleModel.SqlInformation.Delete != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModel.SqlInformation.Delete)
+	}
+	sql = "DELETE FROM `table_information` WHERE `id` = ?"
+	if mSampleModelTableInfo.SqlInformation.Delete != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModelTableInfo.SqlInformation.Delete)
+	}
+
+	// Delete
+	sql = ""
+	if mSampleModel.SqlInformation.LogicalDelete != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModel.SqlInformation.LogicalDelete)
+	}
+	sql = "INSERT INTO `table_information_delete` (`id`, `description`, `deleted_at`) VALUES (?, ?, ?)"
+	if mSampleModelTableInfo.SqlInformation.LogicalDelete != sql {
+		t.Errorf("SQLキャッシュが失敗しました。\nOK: %s\nNG: %s\n", sql, mSampleModelTableInfo.SqlInformation.LogicalDelete)
+	}
+
+}
+
