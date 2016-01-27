@@ -1,7 +1,8 @@
 package model551_test
+
 import (
-	"testing"
 	"github.com/go51/model551"
+	"testing"
 )
 
 func TestLoad(t *testing.T) {
@@ -30,14 +31,18 @@ type SampleModel struct {
 }
 
 type SampleModelTableInfo struct {
-	Key         int64    `db_table:"table_information" db_pk:"true" db:"id"`
-	Name        string   `db:"-"`
+	Key         int64  `db_table:"table_information" db_pk:"true" db:"id"`
+	Name        string `db:"-"`
 	Description string
-	DeletedAt   string   `db_delete:"true"`
+	DeletedAt   string `db_delete:"true"`
 }
 
 func NewSampleModel() interface{} {
 	return SampleModel{}
+}
+
+func NewSampleModelPointer() interface{} {
+	return &SampleModel{}
 }
 
 func NewSampleModelTableInfo() interface{} {
@@ -47,7 +52,7 @@ func NewSampleModelTableInfo() interface{} {
 func TestAdd(t *testing.T) {
 	m := model551.Load()
 
-	m.Add(NewSampleModel)
+	m.Add(NewSampleModel, NewSampleModelPointer)
 
 	detail := m.Get("SampleModel")
 
@@ -62,7 +67,7 @@ func TestAdd(t *testing.T) {
 func TestTableInfo(t *testing.T) {
 	m := model551.Load()
 
-	m.Add(NewSampleModelTableInfo)
+	m.Add(NewSampleModelTableInfo, NewSampleModelPointer)
 
 	mSampleModel := m.Get("SampleModel")
 	mSampleModelTableInfo := m.Get("SampleModelTableInfo")
@@ -163,4 +168,3 @@ func TestSql(t *testing.T) {
 	}
 
 }
-

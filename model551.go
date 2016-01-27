@@ -1,10 +1,11 @@
 package model551
+
 import (
-	"reflect"
+	"database/sql"
 	"errors"
 	"github.com/go51/string551"
+	"reflect"
 	"strconv"
-	"database/sql"
 )
 
 type Model struct {
@@ -13,6 +14,7 @@ type Model struct {
 
 type ModelInformation struct {
 	NewFunc          NewModelFunc
+	NewFuncPointer   NewModelFunc
 	ModelType        reflect.Type
 	ModelName        string
 	TableInformation *TableInformation
@@ -53,13 +55,13 @@ func Load() *Model {
 	}
 
 	modelInstance = &Model{
-		models:map[string]*ModelInformation{},
+		models: map[string]*ModelInformation{},
 	}
 
 	return modelInstance
 }
 
-func (m *Model) Add(newFunc NewModelFunc) {
+func (m *Model) Add(newFunc NewModelFunc, newPointerFunc NewModelFunc) {
 	model := newFunc()
 
 	mType := reflect.TypeOf(model)
@@ -70,9 +72,10 @@ func (m *Model) Add(newFunc NewModelFunc) {
 	}
 
 	mInfo := &ModelInformation{
-		NewFunc:newFunc,
-		ModelType:mType,
-		ModelName:mName,
+		NewFunc:        newFunc,
+		NewFuncPointer: newPointerFunc,
+		ModelType:      mType,
+		ModelName:      mName,
 	}
 
 	mInfo.TableInformation = loadTableSetting(mType)
@@ -88,11 +91,11 @@ func (m *Model) Get(modelName string) *ModelInformation {
 
 func loadTableSetting(mType reflect.Type) *TableInformation {
 	tInfo := &TableInformation{
-		TableName:string551.SnakeCase(mType.Name()),
-		PrimaryKey:"id",
-		Fields:[]string{},
-		DeleteTable:false,
-		DeletedAtField:"",
+		TableName:      string551.SnakeCase(mType.Name()),
+		PrimaryKey:     "id",
+		Fields:         []string{},
+		DeleteTable:    false,
+		DeletedAtField: "",
 	}
 
 	if name := loadTableName(mType); name != "" {
@@ -162,7 +165,7 @@ func loadFields(mType reflect.Type) []string {
 		sField := mType.Field(i)
 		db := sField.Tag.Get("db")
 		del, err := strconv.ParseBool(sField.Tag.Get("db_delete"))
-		if err != nil || ! del {
+		if err != nil || !del {
 			if db == "" {
 				fields = append(fields, string551.SnakeCase(sField.Name))
 			} else if db != "-" {
@@ -177,11 +180,11 @@ func loadFields(mType reflect.Type) []string {
 
 func cacheSql(tInfo *TableInformation) *SqlCache {
 	sqlCache := &SqlCache{
-		Insert:cacheSqlInsert(tInfo),
-		Select:cacheSqlSelect(tInfo),
-		Update:cacheSqlUpdate(tInfo),
-		Delete:cacheSqlDelete(tInfo),
-		LogicalDelete:cacheSqlLogicalDelete(tInfo),
+		Insert:        cacheSqlInsert(tInfo),
+		Select:        cacheSqlSelect(tInfo),
+		Update:        cacheSqlUpdate(tInfo),
+		Delete:        cacheSqlDelete(tInfo),
+		LogicalDelete: cacheSqlLogicalDelete(tInfo),
 	}
 
 	return sqlCache
@@ -191,16 +194,16 @@ func cacheSqlInsert(tInfo *TableInformation) string {
 	sql := ""
 	var append int = 0
 
-	sql = string551.Join(sql, "INSERT INTO `" + tInfo.TableName + "` ")
+	sql = string551.Join(sql, "INSERT INTO `"+tInfo.TableName+"` ")
 	sql = string551.Join(sql, "(")
 	for i := 0; i < len(tInfo.Fields); i++ {
 		if tInfo.Fields[i] == tInfo.PrimaryKey {
 			continue
 		}
 		if append == 0 {
-			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "`")
+			sql = string551.Join(sql, "`"+tInfo.Fields[i]+"`")
 		} else {
-			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "`")
+			sql = string551.Join(sql, ", `"+tInfo.Fields[i]+"`")
 		}
 		append++
 	}
@@ -229,12 +232,12 @@ func cacheSqlSelect(tInfo *TableInformation) string {
 	sql = string551.Join(sql, "SELECT ")
 	for i := 0; i < len(tInfo.Fields); i++ {
 		if i == 0 {
-			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "`")
+			sql = string551.Join(sql, "`"+tInfo.Fields[i]+"`")
 		} else {
-			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "`")
+			sql = string551.Join(sql, ", `"+tInfo.Fields[i]+"`")
 		}
 	}
-	sql = string551.Join(sql, " FROM `" + tInfo.TableName + "` WHERE 1 = 1")
+	sql = string551.Join(sql, " FROM `"+tInfo.TableName+"` WHERE 1 = 1")
 
 	return sql
 }
@@ -243,19 +246,19 @@ func cacheSqlUpdate(tInfo *TableInformation) string {
 	sql := ""
 	var append int = 0
 
-	sql = string551.Join(sql, "UPDATE `" + tInfo.TableName + "` SET ")
+	sql = string551.Join(sql, "UPDATE `"+tInfo.TableName+"` SET ")
 	for i := 0; i < len(tInfo.Fields); i++ {
 		if tInfo.Fields[i] == tInfo.PrimaryKey {
 			continue
 		}
 		if append == 0 {
-			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "` = ?")
+			sql = string551.Join(sql, "`"+tInfo.Fields[i]+"` = ?")
 		} else {
-			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "` = ?")
+			sql = string551.Join(sql, ", `"+tInfo.Fields[i]+"` = ?")
 		}
 		append++
 	}
-	sql = string551.Join(sql, " WHERE `" + tInfo.PrimaryKey + "` = ?")
+	sql = string551.Join(sql, " WHERE `"+tInfo.PrimaryKey+"` = ?")
 
 	return sql
 }
@@ -263,7 +266,7 @@ func cacheSqlUpdate(tInfo *TableInformation) string {
 func cacheSqlDelete(tInfo *TableInformation) string {
 	sql := ""
 
-	sql = string551.Join(sql, "DELETE FROM `" + tInfo.TableName + "` WHERE `" + tInfo.PrimaryKey + "` = ?")
+	sql = string551.Join(sql, "DELETE FROM `"+tInfo.TableName+"` WHERE `"+tInfo.PrimaryKey+"` = ?")
 
 	return sql
 }
@@ -275,16 +278,16 @@ func cacheSqlLogicalDelete(tInfo *TableInformation) string {
 		return sql
 	}
 
-	sql = string551.Join(sql, "INSERT INTO `" + tInfo.TableName + "_delete` ")
+	sql = string551.Join(sql, "INSERT INTO `"+tInfo.TableName+"_delete` ")
 	sql = string551.Join(sql, "(")
 	for i := 0; i < len(tInfo.Fields); i++ {
 		if i == 0 {
-			sql = string551.Join(sql, "`" + tInfo.Fields[i] + "`")
+			sql = string551.Join(sql, "`"+tInfo.Fields[i]+"`")
 		} else {
-			sql = string551.Join(sql, ", `" + tInfo.Fields[i] + "`")
+			sql = string551.Join(sql, ", `"+tInfo.Fields[i]+"`")
 		}
 	}
-	sql = string551.Join(sql, ", `" + tInfo.DeletedAtField + "`) VALUES (")
+	sql = string551.Join(sql, ", `"+tInfo.DeletedAtField+"`) VALUES (")
 	for i := 0; i < len(tInfo.Fields); i++ {
 		if i == 0 {
 			sql = string551.Join(sql, "?")
