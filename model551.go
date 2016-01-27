@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/go51/string551"
 	"strconv"
+	"database/sql"
 )
 
 type Model struct {
@@ -41,6 +42,9 @@ type NewModelFunc func() interface{}
 type PrimaryInterface interface {
 	SetId(int64)
 	Id() int64
+}
+type ScanInterface interface {
+	Scan(rows *sql.Rows) error
 }
 
 func Load() *Model {
