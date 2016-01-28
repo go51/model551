@@ -40,13 +40,23 @@ type SqlCache struct {
 var modelInstance *Model
 
 type NewModelFunc func() interface{}
+type SqlType int
+
+const (
+	SQL_INSERT SqlType = iota
+	SQL_UPDATE
+	SQL_LOGICAL_DELETE
+)
 
 type PrimaryInterface interface {
 	SetId(int64)
-	Id() int64
+	GetId() int64
 }
 type ScanInterface interface {
 	Scan(rows *sql.Rows) error
+}
+type ValuesInterface interface {
+	SqlValues(sqlType SqlType) []interface{}
 }
 
 func Load() *Model {
