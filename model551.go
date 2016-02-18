@@ -58,6 +58,12 @@ type ScanInterface interface {
 type ValuesInterface interface {
 	SqlValues(sqlType SqlType) []interface{}
 }
+type SqlInsertInterface interface {
+	SqlInsert() string
+}
+type SqlUpdateInterface interface {
+	SqlUpdate() string
+}
 
 func Load() *Model {
 	if modelInstance != nil {
